@@ -42,50 +42,22 @@ async def login_user(request: LoginRequest, db: Session = Depends(get_db)):
         return {"error": "Ocurrió un error inesperado", "details": str(e)}
 
 
-# EndPoint para crear el afiliado fundador
-@router.post("/create-founder")
-async def create_founder_affiliate(request: CreateAffiliateRequest, db: Session = Depends(get_db)):
-    """
-    Endpoint para crear el afiliado fundador.
-    """
-    try:
-        sql = text("""
-            CALL CrearAfiliadoFundador(:id_afiliado, :nombre, :apellido, :email, 
-                                       :telefono, :direccion, :fechaRegistro,   :idCiudad,
-                                       :username, :password)
-        """)
-        db.execute(sql, {
-            "id_afiliado": request.id_afiliado,
-            "nombre": request.nombre,
-            "apellido": request.apellido,
-            "email": request.email,
-            "telefono": request.telefono,
-            "direccion": request.direccion,
-            "fechaRegistro": request.fechaRegistro,
-            "idCiudad": request.idCiudad,
-            "username": request.username,
-            "password": request.password
-        })
-        db.commit()
-        return {"message": "Afiliado fundador creado exitosamente"}
-    except Exception as e:
-        db.rollback()
-        return {"error": str(e)}
-
-
-@router.post("/create-by-referral", summary="Create Affiliate by Referral")
-async def create_affiliate_by_referral(
+@router.post("/create-affiliate", summary="Create Affiliate")
+async def create_affiliate(
     request: CreateAffiliateRequest, db: Session = Depends(get_db)
 ):
     """
-    Endpoint para crear un afiliado a través de un referidor.
+    Endpoint unificado para crear afiliados:
+    - Si no se envía codigoReferido, crea el afiliado fundador.
+    - Si se envía codigoReferido, crea un afiliado referenciado.
     """
     try:
+        # Llamar al procedimiento con los datos proporcionados
         sql = text("""
-            CALL CrearAfiliadoPorReferencia(
-                :id_afiliado, :nombre, :apellido, :email,
-                :telefono, :direccion, :fechaRegistro,
-                :idCiudad, :username, :password, :idSuperior
+            CALL CrearAfiliado(
+                :id_afiliado, :nombre, :apellido, :email, 
+                :telefono, :direccion, :fechaRegistro, 
+                :idCiudad, :username, :password, :codigoReferido
             )
         """)
         db.execute(sql, {
@@ -99,10 +71,9 @@ async def create_affiliate_by_referral(
             "idCiudad": request.idCiudad,
             "username": request.username,
             "password": request.password,
-            "idSuperior": request.idSuperior
+            "codigoReferido": request.codigoReferido  # Puede ser NULL
         })
         db.commit()
         return {"message": "Afiliado creado exitosamente"}
     except Exception as e:
         return {"error": str(e)}
-

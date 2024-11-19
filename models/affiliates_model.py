@@ -12,4 +12,4 @@ class CreateAffiliateRequest(BaseModel):
     idCiudad: int
     username: str
     password: str
-    idSuperior: Optional[str] = None 
+    codigoReferido: Optional[str] = None
