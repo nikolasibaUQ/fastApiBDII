@@ -86,95 +86,114 @@ PROCEDURES_AND_TRIGGERS = {
 },
 
     # Procedimiento: Crear Producto
-   "CrearProducto": {
-    "drop": "DROP PROCEDURE IF EXISTS CrearProducto;",
-    "create": """
-    CREATE PROCEDURE CrearProducto (
-        IN idProducto INT,
-        IN nombre VARCHAR(255),
-        IN descripcion VARCHAR(255),
-        IN precio FLOAT,
-        IN idInventario INT,
-        IN cantidadInventario INT,
-        IN idAfiliado VARCHAR(16)
-    )
-    BEGIN
-        DECLARE nivelAfiliado INT;
-
-        -- Validar que el afiliado es de nivel 1
-        SELECT idNivel INTO nivelAfiliado
-        FROM Afiliado
-        WHERE id = idAfiliado;
-
-        IF nivelAfiliado IS NULL OR nivelAfiliado != 1 THEN
-            SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Solo el afiliado principal puede realizar esta operación.';
-        END IF;
-
-        -- Insertar el producto
-        INSERT INTO Producto (idProducto, nombre, descripcion, precio, idInventario, cantidadInventario)
-        VALUES (idProducto, nombre, descripcion, precio, idInventario, cantidadInventario);
-
-        -- Actualizar cantidad en inventario
-        UPDATE Inventario
-        SET cantidadInventario = cantidadInventario + cantidadInventario
-        WHERE idInventario = idInventario;
-    END;
-    """
-},
-
-    # Procedimiento: Listar Productos
-  "ListarProductos": {
-    "drop": "DROP PROCEDURE IF EXISTS ListarProductos;",
-    "create": """
-    CREATE PROCEDURE ListarProductos (
-        IN idAfiliado VARCHAR(16)
-    )
-    BEGIN
-        DECLARE nivelAfiliado INT;
-
-        -- Validar que el afiliado es de nivel 1
-        SELECT idNivel INTO nivelAfiliado
-        FROM Afiliado
-        WHERE id = idAfiliado;
-
-        IF nivelAfiliado IS NULL OR nivelAfiliado != 1 THEN
-            SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Solo el afiliado principal puede realizar esta operación.';
-        END IF;
-
-        -- Listar productos con las columnas requeridas
-        SELECT idProducto, nombre, descripcion, precio, idInventario
-        FROM Producto;
-    END;
-    """
-},
-
    "EliminarProducto": {
-    "drop": "DROP PROCEDURE IF EXISTS EliminarProducto;",
-    "create": """
-    CREATE PROCEDURE EliminarProducto (
-        IN idProducto INT,
-        IN idAfiliado VARCHAR(16)
-    )
-    BEGIN
-        DECLARE nivelAfiliado INT;
+        "drop": "DROP PROCEDURE IF EXISTS EliminarProducto;",
+        "create": """
+        CREATE PROCEDURE EliminarProducto(
+            IN p_idProducto INT,
+            IN p_idAfiliado VARCHAR(16)
+        )
+        BEGIN
+            DECLARE nivelAfiliado INT;
+            DECLARE inventarioID INT;
 
-        -- Validar que el afiliado es de nivel 1
-        SELECT idNivel INTO nivelAfiliado
-        FROM Afiliado
-        WHERE id = idAfiliado;
+            -- Validar que el afiliado es de nivel 1
+            SELECT a.idNivel INTO nivelAfiliado
+            FROM Afiliado a
+            WHERE a.id = p_idAfiliado;
 
-        IF nivelAfiliado IS NULL OR nivelAfiliado != 1 THEN
-            SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Solo el afiliado principal puede realizar esta operación.';
-        END IF;
+            IF nivelAfiliado IS NULL OR nivelAfiliado != 1 THEN
+                SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Solo el afiliado principal puede realizar esta operación.';
+            END IF;
 
-        -- Eliminar el producto
-        DELETE FROM Producto WHERE idProducto = idProducto;
-    END;
-    """
-}
+            -- Verificar que el producto existe y no está eliminado
+            SELECT p.idInventario INTO inventarioID
+            FROM Producto p
+            WHERE p.idProducto = p_idProducto AND p.isEliminado = 0;
+
+            IF inventarioID IS NULL THEN
+                SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'El producto no existe o ya está eliminado.';
+            END IF;
+
+            -- Rebajar la cantidad en el inventario correspondiente
+            UPDATE Inventario i
+            SET i.cantidadInventario = i.cantidadInventario - 1
+            WHERE i.idInventario = inventarioID;
+
+            -- Marcar el producto como eliminado
+            UPDATE Producto p
+            SET p.isEliminado = 1
+            WHERE p.idProducto = p_idProducto;
+        END;
+        """
+    },
+    "CrearProducto": {
+        "drop": "DROP PROCEDURE IF EXISTS CrearProducto;",
+        "create": """
+        CREATE PROCEDURE CrearProducto(
+            IN p_idProducto INT,
+            IN p_nombre VARCHAR(255),
+            IN p_descripcion VARCHAR(255),
+            IN p_precio FLOAT,
+            IN p_idInventario INT,
+            IN p_idAfiliado VARCHAR(16)
+        )
+        BEGIN
+            DECLARE nivelAfiliado INT;
+
+            -- Validar que el afiliado es de nivel 1
+            SELECT a.idNivel INTO nivelAfiliado
+            FROM Afiliado a
+            WHERE a.id = p_idAfiliado;
+
+            IF nivelAfiliado IS NULL OR nivelAfiliado != 1 THEN
+                SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Solo el afiliado principal puede realizar esta operación.';
+            END IF;
+
+            -- Insertar el producto
+            INSERT INTO Producto (
+                idProducto, nombre, descripcion, precio, idInventario, isEliminado
+            ) VALUES (
+                p_idProducto, p_nombre, p_descripcion, p_precio, p_idInventario, 0
+            );
+
+            -- Incrementar la cantidad en el inventario correspondiente
+            UPDATE Inventario i
+            SET i.cantidadInventario = i.cantidadInventario + 1
+            WHERE i.idInventario = p_idInventario;
+        END;
+        """
+    },
+    "ListarProductos": {
+        "drop": "DROP PROCEDURE IF EXISTS ListarProductos;",
+        "create": """
+        CREATE PROCEDURE ListarProductos(
+            IN p_idAfiliado VARCHAR(16)
+        )
+        BEGIN
+            DECLARE nivelAfiliado INT;
+
+            -- Validar que el afiliado es de nivel 1
+            SELECT a.idNivel INTO nivelAfiliado
+            FROM Afiliado a
+            WHERE a.id = p_idAfiliado;
+
+            IF nivelAfiliado IS NULL OR nivelAfiliado != 1 THEN
+                SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Solo el afiliado principal puede realizar esta operación.';
+            END IF;
+
+            -- Listar solo productos activos (no eliminados)
+            SELECT p.idProducto, p.nombre, p.descripcion, p.precio, p.idInventario
+            FROM Producto p
+            WHERE p.isEliminado = 0;
+        END;
+        """
+    }
+
 
 }
 

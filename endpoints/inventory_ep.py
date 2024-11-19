@@ -16,7 +16,7 @@ async def add_product(request: ProductRequest, db: Session = Depends(get_db)):
         # Llamar al procedimiento almacenado para validar y agregar el producto
         sql = text("""
             CALL CrearProducto(:idProducto, :nombre, :descripcion, :precio,
-                               :idInventario, :cantidadInventario, :idAfiliado)
+                               :idInventario, :idAfiliado)
         """)
         db.execute(sql, {
             "idProducto": request.idProducto,
@@ -24,7 +24,6 @@ async def add_product(request: ProductRequest, db: Session = Depends(get_db)):
             "descripcion": request.descripcion,
             "precio": request.precio,
             "idInventario": request.idInventario,
-            "cantidadInventario": request.cantidadInventario,
             "idAfiliado": request.idAfiliado
         })
         db.commit()
@@ -35,21 +34,23 @@ async def add_product(request: ProductRequest, db: Session = Depends(get_db)):
 
 
 
-@router.delete("/delete/{idProducto}", summary="Delete Product")
-async def delete_product(idProducto: int, idAfiliado: str, db: Session = Depends(get_db)):
+@router.post("/delete-product", summary="Logical Delete Product")
+async def delete_product(
+    idProducto: int, idAfiliado: str, db: Session = Depends(get_db)
+):
     """
-    Endpoint para eliminar un producto del inventario.
-    Solo el afiliado principal puede realizar esta operación.
+    Endpoint para realizar la eliminación lógica de un producto. Solo permitido para afiliados de nivel 1.
     """
     try:
         sql = text("""
-            CALL EliminarProducto(:idProducto, :idAfiliado)
+            CALL EliminarProducto(:p_idProducto, :p_idAfiliado)
         """)
-        db.execute(sql, {"idProducto": idProducto, "idAfiliado": idAfiliado})
+        db.execute(sql, {"p_idProducto": idProducto, "p_idAfiliado": idAfiliado})
         db.commit()
-        return {"message": "Producto eliminado exitosamente del inventario."}
+        return {"message": "Producto marcado como eliminado exitosamente"}
     except Exception as e:
         return {"error": str(e)}
+
 
 
 
