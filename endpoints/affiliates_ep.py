@@ -8,6 +8,7 @@ from models.login_model import LoginRequest
 router = APIRouter()
 
 # EndPoint para iniciar sesion
+# EndPoint para iniciar sesion
 @router.post("/login", summary="Login User")
 async def login_user(request: LoginRequest, db: Session = Depends(get_db)):
     """
@@ -16,7 +17,8 @@ async def login_user(request: LoginRequest, db: Session = Depends(get_db)):
     try:
         # Consulta para obtener el usuario
         sql = text("""
-            SELECT username, password
+            SELECT 
+            id, nombre, apellido, email, telefono, direccion, idCiudad, password
             FROM Afiliado
             WHERE username = :username
         """)
@@ -26,13 +28,22 @@ async def login_user(request: LoginRequest, db: Session = Depends(get_db)):
         if not result:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-        db_username, db_password = result
+        id , name, lastName,email , phone, street, ciudad, password  = result
 
         # Validar la contraseña
-        if request.password != db_password:
+        if password != request.password:
             raise HTTPException(status_code=401, detail="Credenciales inválidas")
 
-        return {"message": f"Bienvenido, {db_username}"}
+        return {
+        "message": "Bienvenido",
+        "id": id,
+        "name": name,
+        "lastName": lastName,
+        "email": email,
+        "phone": phone,
+        "street": street,
+        "ciudad": ciudad
+    }
 
     except HTTPException as e:
         # Maneja excepciones de FastAPI (404 o 401)
