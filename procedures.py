@@ -5,7 +5,8 @@ from database import engine  # Asegúrate de que 'engine' está definido en 'dat
 PROCEDURES_AND_TRIGGERS = {
 
     # Procedimiento: Crear Afiliado 
-"CrearAfiliado": {
+ 
+  "CrearAfiliado": {
     "drop": "DROP PROCEDURE IF EXISTS CrearAfiliado;",
     "create": """
         CREATE PROCEDURE CrearAfiliado(
@@ -26,8 +27,8 @@ PROCEDURES_AND_TRIGGERS = {
             DECLARE idSuperior VARCHAR(16);
             DECLARE codigoReferidoGenerado VARCHAR(45);
 
-            -- Verificar si es el fundador (no se envió codigoReferido y no existen afiliados)
-            IF codigoReferido IS NULL THEN
+            -- Verificar si es el fundador (codigoReferido es NULL o vacío y no existen afiliados)
+            IF codigoReferido IS NULL OR codigoReferido = '' THEN
                 IF EXISTS (SELECT 1 FROM Afiliado) THEN
                     SIGNAL SQLSTATE '45000'
                     SET MESSAGE_TEXT = 'Ya existe un afiliado registrado. No se puede crear otro fundador.';
@@ -43,6 +44,12 @@ PROCEDURES_AND_TRIGGERS = {
                     id_afiliado, nombre, apellido, email, telefono, direccion, fechaRegistro,
                     idCiudad, NULL, 1, username, password, codigoReferidoGenerado, 1
                 );
+
+                -- Insertar al fundador en su propia jerarquía si no existe
+                IF NOT EXISTS (SELECT 1 FROM AfiliadoJerarquia WHERE idAfiliado = id_afiliado AND idSuperior = id_afiliado) THEN
+                    INSERT INTO AfiliadoJerarquia (idAfiliado, idSuperior, nivel)
+                    VALUES (id_afiliado, id_afiliado, 0);
+                END IF;
             ELSE
                 -- Validar el codigoReferido y obtener el idSuperior con el nivel más alto
                 SELECT a.id, a.idNivel 
@@ -64,7 +71,7 @@ PROCEDURES_AND_TRIGGERS = {
                 END IF;
 
                 -- Generar código de referido
-                SET codigoReferidoGenerado =  id_afiliado;
+                SET codigoReferidoGenerado = id_afiliado;
 
                 -- Insertar el nuevo afiliado
                 INSERT INTO Afiliado (
@@ -74,10 +81,26 @@ PROCEDURES_AND_TRIGGERS = {
                     id_afiliado, nombre, apellido, email, telefono, direccion, fechaRegistro,
                     idCiudad, idSuperior, nivelSuperior, username, password, codigoReferidoGenerado, 1
                 );
+
+                -- Insertar la relación directa en AfiliadoJerarquia si no existe
+                IF NOT EXISTS (SELECT 1 FROM AfiliadoJerarquia WHERE idAfiliado = id_afiliado AND idSuperior = idSuperior) THEN
+                    INSERT INTO AfiliadoJerarquia (idAfiliado, idSuperior, nivel)
+                    VALUES (id_afiliado, idSuperior, 1);
+                END IF;
+
+                -- Insertar las relaciones indirectas en AfiliadoJerarquia si no existen
+                INSERT INTO AfiliadoJerarquia (idAfiliado, idSuperior, nivel)
+                SELECT id_afiliado, aj.idSuperior, aj.nivel + 1
+                FROM AfiliadoJerarquia aj
+                WHERE aj.idAfiliado = idSuperior
+                AND NOT EXISTS (
+                    SELECT 1 FROM AfiliadoJerarquia
+                    WHERE idAfiliado = id_afiliado AND idSuperior = aj.idSuperior
+                );
             END IF;
         END;
     """
-},
+  },
 
 
     # Procedimiento: Eliminar Producto
