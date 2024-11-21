@@ -20,7 +20,7 @@ async def login_user(request: LoginRequest, db: Session = Depends(get_db)):
             SELECT 
             a.id, a.nombre, a.apellido, a.email, 
             a.telefono, a.direccion, c.nombreciudad, a.password,
-            n.descripcion, n.porcentajecomision
+            n.descripcion, n.idnivel, n.porcentajecomision
             
             FROM Afiliado a
             join nivel n 
@@ -35,7 +35,7 @@ async def login_user(request: LoginRequest, db: Session = Depends(get_db)):
         if not result:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-        id , name, lastName, email, phone, street, city, password, levelDesc, comision   = result
+        id , name, lastName, email, phone, street, city, password, descLevel, idlevel, comision   = result
 
         # Validar la contraseña
         if password != request.password:
@@ -50,7 +50,8 @@ async def login_user(request: LoginRequest, db: Session = Depends(get_db)):
         "phone": phone,
         "street": street,
         "ciudad": city,
-        "nivel": levelDesc,
+        "nivel": descLevel,
+        "idnivel": idlevel,
         "comision": comision
         
         }
