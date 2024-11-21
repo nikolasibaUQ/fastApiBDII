@@ -18,9 +18,16 @@ async def login_user(request: LoginRequest, db: Session = Depends(get_db)):
         # Consulta para obtener el usuario
         sql = text("""
             SELECT 
-            id, nombre, apellido, email, telefono, direccion, idCiudad, password
-            FROM Afiliado
-            WHERE username = :username
+            a.id, a.nombre, a.apellido, a.email, 
+            a.telefono, a.direccion, c.nombreciudad, a.password,
+            n.descripcion, n.porcentajecomision
+            
+            FROM Afiliado a
+            join nivel n 
+            on n.idNivel = a.idNivel
+            join ciudad c
+            on c.idCiudad = a.idCiudad
+            WHERE a.username = :username
         """)
         result = db.execute(sql, {"username": request.username}).fetchone()
 
@@ -28,7 +35,7 @@ async def login_user(request: LoginRequest, db: Session = Depends(get_db)):
         if not result:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-        id , name, lastName,email , phone, street, ciudad, password  = result
+        id , name, lastName, email, phone, street, city, password, levelDesc, comision   = result
 
         # Validar la contraseña
         if password != request.password:
@@ -42,7 +49,10 @@ async def login_user(request: LoginRequest, db: Session = Depends(get_db)):
         "email": email,
         "phone": phone,
         "street": street,
-        "ciudad": ciudad
+        "ciudad": city,
+        "nivel": levelDesc,
+        "comision": comision
+        
         }
     }
 
