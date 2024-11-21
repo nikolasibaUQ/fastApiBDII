@@ -12,3 +12,7 @@ def get_db():
         yield db
     finally:
         db.close()
+
+#Metodo para ejecutar el programa
+
+# uvicorn main:app --reload;          

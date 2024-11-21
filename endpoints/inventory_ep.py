@@ -9,25 +9,25 @@ router = APIRouter(tags=["Inventory"])
 @router.post("/add", summary="Add Product")
 async def add_product(request: ProductRequest, db: Session = Depends(get_db)):
     """
-    Endpoint para agregar un producto al inventario.
+    Endpoint para agregar un producto a tabla productos.
     Solo el afiliado principal puede realizar esta operación.
     """
     try:
         # Llamar al procedimiento almacenado para validar y agregar el producto
         sql = text("""
             CALL CrearProducto(:idProducto, :nombre, :descripcion, :precio,
-                               :idInventario, :idAfiliado)
+                                :idAfiliado, :cantidad)
         """)
         db.execute(sql, {
             "idProducto": request.idProducto,
             "nombre": request.nombre,
             "descripcion": request.descripcion,
             "precio": request.precio,
-            "idInventario": request.idInventario,
-            "idAfiliado": request.idAfiliado
+            "idAfiliado": request.idAfiliado,
+            "cantidad": request.cantidad
         })
         db.commit()
-        return {"message": "Producto añadido exitosamente al inventario."}
+        return {"message": "Producto añadido exitosamente al listado de productos."}
     except Exception as e:
         return {"error": str(e)}
 
@@ -52,16 +52,16 @@ async def delete_product(
 
 
 @router.get("/list", summary="List Products")
-async def list_products(idAfiliado: str, db: Session = Depends(get_db)):
+async def list_products(db: Session = Depends(get_db)):
     """
-    Endpoint para listar todos los productos en el inventario.
+    Endpoint para listar todos los productos en el listado de productos.
     Solo el afiliado principal puede realizar esta operación.
     """
     try:
         sql = text("""
-            CALL ListarProductos(:idAfiliado)
+            CALL ListarProductos()
         """)
-        result = db.execute(sql, {"idAfiliado": idAfiliado}).fetchall()
+        result = db.execute(sql).fetchall()
         products = [
             {
                 "idProducto": row[0],

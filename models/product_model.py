@@ -5,5 +5,5 @@ class ProductRequest(BaseModel):
     nombre: str
     descripcion: str
     precio: float
-    idInventario: int
     idAfiliado: str
+    cantidad: int
