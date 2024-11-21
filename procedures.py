@@ -181,10 +181,11 @@ PROCEDURES_AND_TRIGGERS = {
                 SET MESSAGE_TEXT = 'Solo el afiliado principal puede realizar esta operación.';
             END IF;
 
-            -- Listar solo productos activos (no eliminados)
-            SELECT p.idProducto, p.nombre, p.descripcion, p.precio, p.idInventario
-            FROM Producto p
-            WHERE p.isEliminado = 0;
+            
+            SELECT p.idProducto, p.nombre, p.descripcion, p.precio, i.cantidadInventario
+            FROM Producto p 
+            INNER JOIN inventario i 
+            ON p.idInventario = i.idInventario;
         END;
         """
     }

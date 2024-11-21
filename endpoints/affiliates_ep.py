@@ -34,7 +34,7 @@ async def login_user(request: LoginRequest, db: Session = Depends(get_db)):
         if password != request.password:
             raise HTTPException(status_code=401, detail="Credenciales inválidas")
 
-        return {
+        return { "data":  {
         "message": "Bienvenido",
         "id": id,
         "name": name,
@@ -43,6 +43,7 @@ async def login_user(request: LoginRequest, db: Session = Depends(get_db)):
         "phone": phone,
         "street": street,
         "ciudad": ciudad
+        }
     }
 
     except HTTPException as e:
