@@ -48,7 +48,7 @@ PROCEDURES_AND_TRIGGERS = {
                 SELECT a.id, a.idNivel 
                 INTO idSuperior, nivelSuperior
                 FROM Afiliado a
-                WHERE a.codigoReferido = CONCAT('REF-', codigoReferido) AND a.idEstadoAfiliado = 1
+                WHERE a.codigoReferido = codigoReferido AND a.idEstadoAfiliado = 1
                 ORDER BY a.idNivel DESC LIMIT 1;
 
                 IF idSuperior IS NULL THEN
@@ -64,7 +64,7 @@ PROCEDURES_AND_TRIGGERS = {
                 END IF;
 
                 -- Generar código de referido
-                SET codigoReferidoGenerado = CONCAT('REF-', id_afiliado);
+                SET codigoReferidoGenerado =  id_afiliado;
 
                 -- Insertar el nuevo afiliado
                 INSERT INTO Afiliado (
