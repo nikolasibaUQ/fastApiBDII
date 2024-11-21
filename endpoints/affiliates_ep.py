@@ -100,3 +100,35 @@ async def create_affiliate(
         return {"message": "Afiliado creado exitosamente"}
     except Exception as e:
         return {"error": str(e)}
+
+
+@router.get("/list-network/{idAfiliado}", summary="List Network of an Affiliate")
+async def list_affiliate_network(idAfiliado: str, db: Session = Depends(get_db)):
+    """
+    Endpoint para listar la red de un afiliado.
+    """
+    try:
+        sql = text("""
+            CALL ListarRedAfiliado(:idAfiliado)
+        """)
+        result = db.execute(sql, {"idAfiliado": idAfiliado}).fetchall()
+
+        network = [
+            {
+                "idAfiliado": row[0],
+                "nombre": row[1],
+                "apellido": row[2],
+                "email": row[3],
+                "telefono": row[4],
+                "direccion": row[5],
+                "fechaRegistro": row[6],
+                "idCiudad": row[7],
+                "nivel": row[8],
+                "nivelEnRed": row[9],
+                "codigoReferido": row[10]
+            }
+            for row in result
+        ]
+        return {"network": network}
+    except Exception as e:
+        return {"error": str(e)}

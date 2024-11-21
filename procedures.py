@@ -102,6 +102,58 @@ PROCEDURES_AND_TRIGGERS = {
     """
   },
 
+    "ListarRedAfiliado": {
+    "drop": "DROP PROCEDURE IF EXISTS ListarRedAfiliado;",
+    "create": """
+        CREATE PROCEDURE ListarRedAfiliado(
+            IN p_idAfiliado VARCHAR(16)
+        )
+        BEGIN
+            -- CTE recursiva para construir la jerarquía completa de afiliados
+            WITH RECURSIVE AfiliadoRed AS (
+                -- Nivel inicial: el afiliado directo
+                SELECT 
+                    a.id AS idAfiliado,
+                    a.nombre,
+                    a.apellido,
+                    a.email,
+                    a.telefono,
+                    a.direccion,
+                    a.fechaRegistro,
+                    a.idCiudad,
+                    a.idNivel AS nivel,
+                    1 AS nivelEnRed, -- Nivel relativo en la red
+                    a.codigoReferido
+                FROM Afiliado a
+                WHERE a.idSuperior = p_idAfiliado
+
+                UNION ALL
+
+                -- Iteración recursiva para encontrar afiliados indirectos
+                SELECT 
+                    af.id AS idAfiliado,
+                    af.nombre,
+                    af.apellido,
+                    af.email,
+                    af.telefono,
+                    af.direccion,
+                    af.fechaRegistro,
+                    af.idCiudad,
+                    af.idNivel AS nivel,
+                    ar.nivelEnRed + 1 AS nivelEnRed,
+                    af.codigoReferido
+                FROM Afiliado af
+                INNER JOIN AfiliadoRed ar ON af.idSuperior = ar.idAfiliado
+            )
+
+            -- Seleccionar la jerarquía construida
+            SELECT * 
+            FROM AfiliadoRed;
+        END;
+    """
+},
+
+
 
     # Procedimiento: Eliminar Producto
 "EliminarProducto": {
