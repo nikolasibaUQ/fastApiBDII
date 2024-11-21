@@ -4,7 +4,7 @@ from sqlalchemy import text
 from database import get_db
 from models.product_model import ProductRequest
 
-router = APIRouter(prefix="/inventory", tags=["Inventory"])
+router = APIRouter(tags=["Inventory"])
 
 @router.post("/add", summary="Add Product")
 async def add_product(request: ProductRequest, db: Session = Depends(get_db)):
@@ -32,8 +32,6 @@ async def add_product(request: ProductRequest, db: Session = Depends(get_db)):
         return {"error": str(e)}
 
 
-
-
 @router.post("/delete-product", summary="Logical Delete Product")
 async def delete_product(
     idProducto: int, idAfiliado: str, db: Session = Depends(get_db)
@@ -45,14 +43,12 @@ async def delete_product(
         sql = text("""
             CALL EliminarProducto(:p_idProducto, :p_idAfiliado)
         """)
-        db.execute(sql, {"p_idProducto": idProducto, "p_idAfiliado": idAfiliado})
+        db.execute(sql, {"p_idProducto": idProducto,
+                   "p_idAfiliado": idAfiliado})
         db.commit()
         return {"message": "Producto marcado como eliminado exitosamente"}
     except Exception as e:
         return {"error": str(e)}
-
-
-
 
 
 @router.get("/list", summary="List Products")
@@ -72,12 +68,10 @@ async def list_products(idAfiliado: str, db: Session = Depends(get_db)):
                 "nombre": row[1],
                 "descripcion": row[2],
                 "precio": row[3],
-                "idInventario": row[4],
+                "cantidad": row[4],
+
             } for row in result
         ]
         return {"products": products}
     except Exception as e:
         return {"error": str(e)}
-
-
-
