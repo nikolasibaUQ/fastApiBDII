@@ -75,3 +75,30 @@ async def list_products(db: Session = Depends(get_db)):
         return {"products": products}
     except Exception as e:
         return {"error": str(e)}
+
+@router.put("/producto/{idProducto}", summary="Actualizar Producto")
+async def actualizar_producto(
+    producto: ProductRequest,  # Usamos tu modelo existente
+    db: Session = Depends(get_db)
+):
+    """
+    Endpoint para actualizar un producto. Solo puede ser usado por afiliados de nivel 1.
+    """
+    try:
+        sql = text("""
+            CALL ActualizarProducto(
+                :p_idProducto, :p_nombre, :p_descripcion, :p_precio, :p_cantidad, :p_idAfiliado
+            )
+        """)
+        db.execute(sql, {
+            "p_idProducto": producto.idProducto,
+            "p_nombre": producto.nombre,
+            "p_descripcion": producto.descripcion,
+            "p_precio": producto.precio,
+            "p_cantidad": producto.cantidad,
+            "p_idAfiliado": producto.idAfiliado
+        })
+        db.commit()
+        return {"message": "Producto actualizado exitosamente"}
+    except Exception as e:
+        return {"error": str(e)}

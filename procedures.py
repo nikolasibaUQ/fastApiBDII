@@ -174,6 +174,52 @@ PROCEDURES_AND_TRIGGERS = {
     """
 },
 
+"ActualizarProducto": {
+    "drop": "DROP PROCEDURE IF EXISTS ActualizarProducto;",
+    "create": """
+        CREATE PROCEDURE ActualizarProducto(
+            IN p_idProducto INT,
+            IN p_nombre VARCHAR(255),
+            IN p_descripcion VARCHAR(255),
+            IN p_precio DECIMAL(10, 2),
+            IN p_cantidad INT,
+            IN p_idAfiliado VARCHAR(16)
+        )
+        BEGIN
+            DECLARE nivelAfiliado INT;
+
+            -- Verificar que el afiliado es de nivel 1
+            SELECT a.idNivel INTO nivelAfiliado
+            FROM Afiliado a
+            WHERE a.id = p_idAfiliado;
+
+            IF nivelAfiliado IS NULL OR nivelAfiliado != 1 THEN
+                SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Solo el afiliado principal puede realizar esta operación.';
+            END IF;
+
+            -- Verificar si el producto existe
+            IF NOT EXISTS (
+                SELECT 1
+                FROM Producto
+                WHERE idProducto = p_idProducto
+            ) THEN
+                SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'El producto no existe.';
+            END IF;
+
+            -- Actualizar los datos del producto
+            UPDATE Producto
+            SET 
+                nombre = p_nombre,
+                descripcion = p_descripcion,
+                precio = p_precio,
+                cantidad = p_cantidad
+            WHERE idProducto = p_idProducto;
+        END;
+    """
+},
+
 
 }
 
