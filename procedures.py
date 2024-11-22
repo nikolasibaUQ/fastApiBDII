@@ -295,6 +295,89 @@ PROCEDURES_AND_TRIGGERS = {
     """
 },
 
+    #VENTAS
+        #Trigger crear despacho luego de una venta
+      # Trigger: DespachoVenta
+    "DespachoVenta": {
+        "drop": "DROP TRIGGER IF EXISTS DespachoVenta;",
+        "create": """
+        CREATE TRIGGER DespachoVenta
+        AFTER INSERT ON Venta
+        FOR EACH ROW
+        BEGIN
+            INSERT INTO Despacho (idVenta, fechaEnvio, idEstado)
+            VALUES (NEW.idVenta, NOW(), 1);
+        END;
+        """
+    },
+
+
+    #Registrar Venta
+     "RegistrarVenta": {
+        "drop": "DROP PROCEDURE IF EXISTS RegistrarVenta;",
+        "create": """
+        CREATE PROCEDURE RegistrarVenta(
+            IN p_fechaVenta DATE,
+            IN p_valor DECIMAL(10, 2),
+            IN p_idAfiliado VARCHAR(16),
+            IN p_listaProductos JSON
+        )
+        BEGIN
+            DECLARE cantidadDisponible INT;
+            DECLARE cantidadSolicitada INT;
+            DECLARE idProducto INT;
+            DECLARE subtotal DECIMAL(10, 2);
+            DECLARE idVenta INT;
+
+            -- Crear la venta
+            INSERT INTO Venta (fechaVenta, valor, idAfiliado)
+            VALUES (p_fechaVenta, p_valor, p_idAfiliado);
+
+            -- Obtener el ID de la venta recién creada
+            SET idVenta = LAST_INSERT_ID();
+
+            -- Iterar sobre la lista de productos proporcionada
+            SET @jsonData = p_listaProductos;
+            WHILE JSON_LENGTH(@jsonData) > 0 DO
+                SET idProducto = CAST(JSON_UNQUOTE(JSON_EXTRACT(@jsonData, '$[0].idProducto')) AS UNSIGNED);
+                SET cantidadSolicitada = CAST(JSON_UNQUOTE(JSON_EXTRACT(@jsonData, '$[0].cantidad')) AS UNSIGNED);
+
+                -- Verificar si hay suficiente cantidad disponible en el producto
+                SELECT cantidad INTO cantidadDisponible
+                FROM Producto
+                WHERE idProducto = idProducto
+                LIMIT 1;
+
+                IF cantidadDisponible IS NULL OR cantidadDisponible < cantidadSolicitada THEN
+                    SIGNAL SQLSTATE '45000'
+                    SET MESSAGE_TEXT = 'Stock insuficiente para el producto.';
+                END IF;
+
+                -- Calcular subtotal
+                SELECT precio * cantidadSolicitada INTO subtotal
+                FROM Producto
+                WHERE idProducto = idProducto
+                LIMIT 1;
+
+                -- Insertar en DetalleVenta
+                INSERT INTO DetalleVenta (cantidad, subtotal, Venta_idVenta, idProducto)
+                VALUES (cantidadSolicitada, subtotal, idVenta, idProducto);
+
+                -- Restar cantidad del producto
+                UPDATE Producto
+                SET cantidad = cantidad - cantidadSolicitada
+                WHERE idProducto = idProducto;
+
+                -- Eliminar el primer elemento del JSON
+                SET @jsonData = JSON_REMOVE(@jsonData, '$[0]');
+            END WHILE;
+
+            -- El trigger se encargará de insertar en la tabla Despacho
+        COMMIT;
+        END;       
+ """
+    }
+
 
 }
 
